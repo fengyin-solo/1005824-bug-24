@@ -1,5 +1,11 @@
 import { MODULE_BY_KEY } from '@/data/modules'
 import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
+import {
+  changeStationStatus,
+  installedByDistrict,
+  PUMP_MODULE_KEY,
+} from '@/api/station-service'
+import { useSessionStore } from '@/stores/session'
 import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
 
 // 会写进数据的「往回走」动作：命中就把这条记录标成异常态，看板上能一眼看出来。
@@ -28,12 +34,31 @@ export function listEntries(key: string, filters: Record<string, string> = {}): 
   return { items: matched, total: matched.length, page: 1, size: matched.length }
 }
 
-export function runAction(key: string, id: number, action: string): ActionResult {
+// 泵站台账的状态流转也走受控数据层：停用后整档只读，「复活」尝试在这里被挡回并留痕。
+// 其余模块沿用通用动作流转。
+export function runAction(
+  key: string,
+  id: number,
+  action: string,
+  source: 'list' | 'detail' = 'list',
+): ActionResult {
   const meta = moduleMeta(key)
   const target = meta.actionTargets[action]
   if (!target) {
     return { ok: false, message: `${meta.entity}没有登记「${action}」这个动作` }
   }
+
+  if (key === PUMP_MODULE_KEY) {
+    const session = useSessionStore()
+    return changeStationStatus({
+      identity: { operator: session.operator, district: session.district },
+      stationId: id,
+      action,
+      target,
+      source,
+    })
+  }
+
   const rows = listRows(key)
   const index = rows.findIndex((row) => Number(row.id) === id)
   if (index < 0) {
@@ -68,7 +93,7 @@ export function exportEntries(key: string): { filename: string; content: string 
   for (const row of listRows(key)) {
     lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
   }
-  return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }
+  return { filename: `${meta.name}-清单.csv`, content: `﻿${lines.join('\n')}` }
 }
 
 export function downloadEntries(key: string): void {
@@ -95,11 +120,15 @@ export function loadOverview(): OverviewResult {
       abnormal: entries.filter((row) => row.abnormal).length,
     }
   })
+  // 归属口径改过之后，装机台数一律按各站当前归属重新聚合一次。
+  const pumpDistricts = installedByDistrict()
+  const pumpInstalledTotal = pumpDistricts.reduce((sum, item) => sum + item.installed, 0)
   const cards = [
     { label: '业务模块', value: modules.length },
     { label: '登记总量', value: modules.reduce((sum, item) => sum + item.created, 0) },
     { label: '待处理', value: modules.reduce((sum, item) => sum + item.pending, 0) },
     { label: '异常量', value: modules.reduce((sum, item) => sum + item.abnormal, 0) },
+    { label: '泵站装机台数（按现归属重算）', value: pumpInstalledTotal },
   ]
-  return { cards, modules }
+  return { cards, modules, pumpDistricts, pumpInstalledTotal }
 }

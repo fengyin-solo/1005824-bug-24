@@ -3,6 +3,8 @@ import type { EntryRow } from './types'
 
 // 本地持久化：数据放在 localStorage 里，刷新、关掉再打开都还在。
 const STORAGE_KEY = 'drainage-pump:entries'
+// 数据层自己用的元信息（迁移标记、审计序号等），跟业务数据分开存。
+const META_KEY = 'drainage-pump:meta'
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -56,4 +58,29 @@ export function resetRows(key: string): EntryRow[] {
 
 export function storageKey(): string {
   return STORAGE_KEY
+}
+
+function readMeta(): Record<string, unknown> {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return {}
+  }
+  try {
+    return JSON.parse(window.localStorage.getItem(META_KEY) ?? '{}') as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
+export function getMeta<T>(key: string): T | null {
+  const value = readMeta()[key]
+  return value === undefined ? null : (value as T)
+}
+
+export function setMeta(key: string, value: unknown): void {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+  const next = readMeta()
+  next[key] = value
+  window.localStorage.setItem(META_KEY, JSON.stringify(next))
 }
