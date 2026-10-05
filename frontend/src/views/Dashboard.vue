@@ -28,6 +28,22 @@
         </tr>
       </tbody>
     </table>
+    <h3 class="section-title">泵站装机台数（按现行片区归属重算）</h3>
+    <table class="data-table">
+      <thead>
+        <tr><th>所属片区</th><th>泵站数</th><th>装机台数</th></tr>
+      </thead>
+      <tbody>
+        <tr v-for="row in stationRegions" :key="row.region">
+          <td>{{ row.region }}</td>
+          <td>{{ row.stations }}</td>
+          <td>{{ row.units }}</td>
+        </tr>
+        <tr v-if="!stationRegions.length">
+          <td colspan="3" class="empty-state">暂无泵站台账数据</td>
+        </tr>
+      </tbody>
+    </table>
     <footer class="page-foot">
       <span>数据保存在本机浏览器里，换浏览器或清缓存会回到示例数据</span>
     </footer>
@@ -42,11 +58,13 @@ import type { OverviewResult } from '@/data/types'
 
 const cards = ref<OverviewResult['cards']>([])
 const moduleRows = ref<OverviewResult['modules']>([])
+const stationRegions = ref<OverviewResult['stationRegions']>([])
 
 function refresh() {
   const payload = loadOverview()
   cards.value = payload.cards
   moduleRows.value = payload.modules
+  stationRegions.value = payload.stationRegions
 }
 
 onMounted(refresh)

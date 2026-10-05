@@ -68,4 +68,8 @@ npm run build
 - 字段、状态、动作与流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
+- 泵站台账的站名、所属片区、设计流量由 `local-service.ts` 里的 `updatePumpStation` 统一收口：
+  每座站的归属只算它所在的片区，只有本片区值班账号能改；已停用的站整条只读；同一片区下站名唯一；
+  同一座站按台账版本号只落先到的一版。受理与挡回都写入 `drainage-pump:station-audit` 留痕，
+  列表页与详情页都能倒查；概览看板的装机台数每次按现行片区归属重算。
 - 想回到初始数据：清掉浏览器里 `drainage-pump:entries` 这一项，或调用 `resetModule(模块)`。

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import Dashboard from '@/views/Dashboard.vue'
 const Pumpstation = () => import('@/views/pumpstation/index.vue')
+const PumpstationDetail = () => import('@/views/pumpstation/detail.vue')
 const Pumprun = () => import('@/views/pumprun/index.vue')
 const Drainpipe = () => import('@/views/drainpipe/index.vue')
 const Manhole = () => import('@/views/manhole/index.vue')
@@ -25,6 +26,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard },
     { path: '/pumpstation', name: 'pumpstation', component: Pumpstation },
+    { path: '/pumpstation/:id', name: 'pumpstation-detail', component: PumpstationDetail },
     { path: '/pumprun', name: 'pumprun', component: Pumprun },
     { path: '/drainpipe', name: 'drainpipe', component: Drainpipe },
     { path: '/manhole', name: 'manhole', component: Manhole },

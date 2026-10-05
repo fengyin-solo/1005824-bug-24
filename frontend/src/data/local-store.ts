@@ -1,8 +1,11 @@
 import { SEED_ROWS } from './seed'
-import type { EntryRow } from './types'
+import type { AuditEntry, EntryRow } from './types'
 
 // 本地持久化：数据放在 localStorage 里，刷新、关掉再打开都还在。
 const STORAGE_KEY = 'drainage-pump:entries'
+// 台账改动留痕单独存一份：重置业务模块数据不会把留痕冲掉。
+const AUDIT_KEY = 'drainage-pump:station-audit'
+const AUDIT_LIMIT = 200
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -56,4 +59,40 @@ export function resetRows(key: string): EntryRow[] {
 
 export function storageKey(): string {
   return STORAGE_KEY
+}
+
+function readAudit(): AuditEntry[] {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return []
+  }
+  const raw = window.localStorage.getItem(AUDIT_KEY)
+  if (!raw) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as AuditEntry[]) : []
+  } catch {
+    return []
+  }
+}
+
+let auditCache: AuditEntry[] | null = null
+
+/** 留痕按时间倒序返回（最新的一条在最前）。 */
+export function listAudit(): AuditEntry[] {
+  if (auditCache === null) {
+    auditCache = readAudit()
+  }
+  return auditCache
+}
+
+export function recordAudit(entry: Omit<AuditEntry, 'id'>): AuditEntry {
+  const current = listAudit()
+  const saved: AuditEntry = { ...entry, id: (current[0]?.id ?? 0) + 1 }
+  auditCache = [saved, ...current].slice(0, AUDIT_LIMIT)
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem(AUDIT_KEY, JSON.stringify(auditCache))
+  }
+  return saved
 }
